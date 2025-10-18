@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - EncontraTudo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .cadastro-container {
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 50px;
+            position: relative;
+        }
+
+        /* Progresso */
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #f0f0f0;
+            border-radius: 25px 25px 0 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        /* Steps */
+        .step {
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+        }
+
+        .step.exit {
+            animation: slideOut 0.3s ease;
+        }
+
+        /* Títulos */
+        h2 {
+            color: #333;
+            font-size: 26px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 15px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        /* Botões de escolha */
+        .choice-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .choice-btn {
+            padding: 30px 20px;
+            border: 3px solid #e0e0e0;
+            background: white;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .choice-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .choice-btn.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .choice-btn .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        /* Inputs */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Mapa */
+        #mapaContainer {
+            margin: 20px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            display: none;
+        }
+
+        #mapa {
+            height: 300px;
+            width: 100%;
+        }
+
+        .map-instruction {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        /* Botões de navegação */
+        .navigation {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-back {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-back:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-next:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        /* Modal de Sucesso */
+        .success-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .success-modal.show {
+            display: flex;
+        }
+
+        .success-content {
+            background: white;
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: checkmark 0.8s ease;
+        }
+
+        @keyframes checkmark {
+            0% {
+                transform: scale(0) rotate(0deg);
+            }
+            50% {
+                transform: scale(1.2) rotate(180deg);
+            }
+            100% {
+                transform: scale(1) rotate(360deg);
+            }
+        }
+
+        .success-title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .success-text {
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* Erros */
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Link de login */
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Endereço manual */
+        .manual-address {
+            display: none;
+        }
+
+        .manual-address.show {
+            display: block;
+        }
+
+        .manual-link {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .manual-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .manual-link a:hover {
+            text-decoration: underline;
+        }
+
+        .small-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cadastro-container">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <!-- STEP 1: Tipo de Estabelecimento -->
+        <div class="step active" id="step1">
+            <h2>Vamos começar! 👋</h2>
+            <p class="subtitle">Você é autônomo ou tem uma loja física?</p>
+            
+            <div class="choice-buttons">
+                <button class="choice-btn" data-type="loja">
+                    <span class="icon">🏪</span>
+                    <div>Loja Física</div>
+                </button>
+                <button class="choice-btn" data-type="autonomo">
+                    <span class="icon">🛠️</span>
+                    <div>Autônomo</div>
+                </button>
+            </div>
+
+            <div class="navigation">
+                <button class="btn btn-next" id="nextStep1" disabled>Continuar</button>
+            </div>
+
+            <div class="login-link">
+                Já tem uma conta? <a href="login.html">Fazer Login</a>
+            </div>
+        </div>
+
+        <!-- STEP 2: Nome -->
+        <div class="step" id="step2">
+            <h2>Legal! 😊</h2>
+            <p class="subtitle">Qual o nome da sua <span id="tipoTexto">loja</span>?</p>
+            
+            <div class="input-group">
+                <input type="text" id="nome" placeholder="Ex: Padaria do João" autofocus>
+            </div>
+
+            <div class="navigation">
+                <button class="btn btn-back" onclick="voltarStep(1)">Voltar</button>
+                <button class="btn btn-next" id="nextStep2" disabled>Continuar</button>
+            </div>
+        </div>
+
+        <!-- STEP 3: Contato -->
+        <div class="step" id="step3">
+            <h2>Ótimo! 📱</h2>
+            <p class="subtitle">E agora, qual o meio de login que você quer?</p>
+            
+            <div class="choice-buttons">
+                <button class="choice-btn" data-contact="telefone">
+                    <span class="icon">📱</span>
+                    <div>Telefone</div>
+                </button>
+                <button class="choice-btn" data-contact="email">
+                    <span class="icon">📧</span>
+                    <div>E-mail</div>
+                </button>
+            </div>
+
+            <div class="input-group">
+                <label id="labelContato">Telefone</label>
+                <input type="text" id="contato" placeholder="(00) 00000-0000">
+            </div>
+
+            <div class="navigation">
+                <button class="btn btn-back" onclick="voltarStep(2)">Voltar</button>
+                <button class="btn btn-next" id="nextStep3" disabled>Continuar</button>
+            </div>
+        </div>
+
+        <!-- STEP 4: Localização -->
+        <div class="step" id="step4">
+            <h2>Perfeito! 📍</h2>
+            <p class="subtitle" id="localizacaoTexto">Onde você está localizado?</p>
+            
+            <!-- Para Loja Física -->
+            <div id="enderecoLoja">
+                <div class="input-group">
+                    <label>CEP</label>
+                    <input type="text" id="cep" placeholder="00000-000" maxlength="9">
+                    <div class="small-text">Digite seu CEP. Se não encontrarmos, você preenche manualmente!</div>
+                </div>
+
+                <div class="loading" id="loadingCep">🔍 Buscando endereço...</div>
+
+                <div class="manual-address" id="manualAddress">
+                    <div class="input-group">
+                        <label>Endereço</label>
+                        <input type="text" id="logradouro" placeholder="Rua, Avenida...">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Número</label>
+                        <input type="text" id="numero" placeholder="123">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Complemento (opcional)</label>
+                        <input type="text" id="complemento" placeholder="Apto, Sala...">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Bairro</label>
+                        <input type="text" id="bairro" placeholder="Centro">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Cidade</label>
+                        <input type="text" id="cidade" placeholder="São Paulo">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Estado</label>
+                        <input type="text" id="estado" placeholder="SP" maxlength="2">
+                    </div>
+
+                    <div id="mapaContainer">
+                        <div id="mapa"></div>
+                        <div class="map-instruction">
+                            📍 Arraste o marcador para ajustar a localização exata
+                        </div>
+                    </div>
+                </div>
+
+                <div class="manual-link">
+                    <a href="#" id="linkManual">Não sei meu CEP / Preencher manualmente</a>
+                </div>
+            </div>
+
+            <!-- Para Autônomo -->
+            <div id="enderecoAutonomo" style="display: none;">
+                <div class="input-group">
+                    <label>Cidade</label>
+                    <input type="text" id="cidadeAutonomo" placeholder="São Paulo">
+                </div>
+
+                <div class="input-group">
+                    <label>Estado</label>
+                    <input type="text" id="estadoAutonomo" placeholder="SP" maxlength="2">
+                </div>
+
+                <div class="input-group">
+                    <label>Bairro (opcional)</label>
+                    <input type="text" id="bairroAutonomo" placeholder="Centro">
+                    <div class="small-text">Ajuda clientes a encontrar você</div>
+                </div>
+            </div>
+
+            <div class="navigation">
+                <button class="btn btn-back" onclick="voltarStep(3)">Voltar</button>
+                <button class="btn btn-next" id="nextStep4" disabled>Continuar</button>
+            </div>
+        </div>
+
+        <!-- STEP 5: Senha -->
+        <div class="step" id="step5">
+            <h2>Quase lá! 🔐</h2>
+            <p class="subtitle">Agora escolha uma senha segura</p>
+            
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="senha" placeholder="Mínimo 6 caracteres">
+            </div>
+
+            <div class="input-group">
+                <label>Confirmar Senha</label>
+                <input type="password" id="confirmarSenha" placeholder="Digite a senha novamente">
+            </div>
+
+            <div class="navigation">
+                <button class="btn btn-back" onclick="voltarStep(4)">Voltar</button>
+                <button class="btn btn-next" id="btnFinalizar">Finalizar Cadastro</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Sucesso -->
+    <div class="success-modal" id="successModal">
+        <div class="success-content">
+            <div class="success-icon">✓</div>
+            <div class="success-title">Correto!</div>
+            <div class="success-text">Cadastro concluído com sucesso</div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/imask"></script>
+    <script src="cadastro.js"></script>
+</body>
+</html>

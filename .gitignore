@@ -1,0 +1,22 @@
+# Dependências
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Temporários
+*.tmp
+*.temp
+
+/generated/prisma
