@@ -1,0 +1,15 @@
+{
+  "watch": [
+    "server-new.js",
+    "src",
+    "prisma/schema.prisma"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "web/**",
+    "node_modules/**",
+    "public/**",
+    ".git/**",
+    "**/*.log"
+  ]
+}

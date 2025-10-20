@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+
+:root {
+	color-scheme: light;
+}
+
+body {
+	@apply bg-bg text-text-primary;
+}
+
+.card {
+	@apply bg-bg-card border border-black/[0.06] rounded-xl;
+}
+
+.btn { @apply inline-flex items-center gap-2; }

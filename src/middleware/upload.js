@@ -1,51 +1,42 @@
-const multer = require('multer');
-const path = require('path');
-const crypto = require('crypto');
+const multer = require('multer')
+const path = require('path')
+const fs = require('fs')
+const sharp = require('sharp')
 
-// Configuração de armazenamento
+const uploadDir = path.join(process.cwd(), 'uploads')
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir)
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (file.fieldname === 'logo') {
-      cb(null, 'uploads/logos');
-    } else if (file.fieldname === 'nfe') {
-      cb(null, 'uploads/nfe');
-    } else {
-      cb(null, 'uploads/produtos');
-    }
+  destination: function (req, file, cb) {
+    cb(null, uploadDir)
   },
-  filename: (req, file, cb) => {
-    const hash = crypto.randomBytes(16).toString('hex');
-    const filename = `${hash}${path.extname(file.originalname)}`;
-    cb(null, filename);
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase()
+    const base = path.basename(file.originalname, ext).replace(/[^a-z0-9-_]+/gi, '-')
+    cb(null, `${Date.now()}-${base}${ext || '.jpg'}`)
   }
-});
+})
 
-// Filtro de tipos de arquivo
-const fileFilter = (req, file, cb) => {
-  if (file.fieldname === 'nfe') {
-    // NFe aceita apenas XML
-    if (file.mimetype === 'text/xml' || file.originalname.endsWith('.xml')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Apenas arquivos XML são permitidos para NFe'));
-    }
-  } else {
-    // Imagens
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Apenas imagens (JPEG, PNG, WEBP) são permitidas'));
-    }
+function fileFilter(req, file, cb) {
+  if (!file.mimetype.startsWith('image/')) return cb(new Error('Apenas imagens'))
+  cb(null, true)
+}
+
+const maxMb = parseInt(process.env.MAX_FILE_SIZE_MB || '2')
+
+const upload = multer({ storage, fileFilter, limits: { fileSize: maxMb * 1024 * 1024 } })
+
+async function compressImage(filePath) {
+  const ext = path.extname(filePath).toLowerCase()
+  const out = filePath.replace(ext, `.webp`)
+  try {
+    await sharp(filePath).resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 82 }).toFile(out)
+    // swap files to use webp
+    fs.unlinkSync(filePath)
+    return out
+  } catch (e) {
+    return filePath
   }
-};
+}
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE_MB) * 1024 * 1024 // 1MB default
-  }
-});
-
-module.exports = upload;
+module.exports = { upload, compressImage }

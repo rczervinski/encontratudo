@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Loja {
+  id                    String          @id @default(uuid())
+  email                 String?         @unique
+  telefone              String?
+  senha                 String
+  nome_loja             String
+  slug                  String          @unique
+  descricao             String?
+  endereco              String?
+  cidade                String
+  estado                String
+  cep                   String?
+  latitude              Float?
+  longitude             Float?
+  telefone_loja         String?
+  whatsapp              String?
+  horario_funcionamento String?
+  ativo                 Boolean         @default(true)
+  plano                 String          @default("gratuito")
+  criado_em             DateTime        @default(now())
+  atualizado_em         DateTime        @updatedAt
+  bairro                String?
+  analytics             Analytics[]
+  categorias            Categoria[]
+  personalizacao        Personalizacao?
+  produtos              Produto[]
+
+  @@index([slug])
+  @@index([cidade, estado])
+  @@map("loja")
+}
+
+model Categoria {
+  id        String      @id @default(uuid())
+  nome      String
+  slug      String
+  nivel     Int
+  ordem     Int         @default(0)
+  pai_id    String?
+  loja_id   String
+  criado_em DateTime    @default(now())
+  loja      Loja        @relation(fields: [loja_id], references: [id], onDelete: Cascade)
+  pai       Categoria?  @relation("SubCategorias", fields: [pai_id], references: [id], onDelete: Cascade)
+  filhos    Categoria[] @relation("SubCategorias")
+  produtos  Produto[]
+
+  @@unique([loja_id, slug, nivel])
+  @@index([loja_id, pai_id])
+  @@map("categoria")
+}
+
+model Produto {
+  id                 String          @id @default(uuid())
+  tipo               String          @default("produto")
+  nome_produto       String
+  descricao          String?
+  preco              Float
+  preco_promocional  Float?
+  tags               String
+  categoria_id       String?
+  estoque_quantidade Int?
+  disponivel         Boolean         @default(true)
+  bloqueado          Boolean         @default(false)
+  duracao_estimada   String?
+  area_atendimento   String?
+  aceita_urgencia    Boolean         @default(false)
+  importado_nfe      Boolean         @default(false)
+  nfe_chave          String?
+  loja_id            String
+  criado_em          DateTime        @default(now())
+  atualizado_em      DateTime        @updatedAt
+  imagens            ImagemProduto[]
+  categoria          Categoria?      @relation(fields: [categoria_id], references: [id])
+  loja               Loja            @relation(fields: [loja_id], references: [id], onDelete: Cascade)
+
+  @@index([loja_id, tipo, disponivel, bloqueado])
+  @@index([categoria_id])
+  @@index([tipo])
+  @@map("produto")
+}
+
+model ImagemProduto {
+  id         String   @id @default(uuid())
+  produto_id String
+  url        String
+  ordem      Int      @default(0)
+  tamanho_kb Int
+  criado_em  DateTime @default(now())
+  produto    Produto  @relation(fields: [produto_id], references: [id], onDelete: Cascade)
+
+  @@index([produto_id, ordem])
+  @@map("imagem_produto")
+}
+
+model Personalizacao {
+  id                 String   @id @default(uuid())
+  loja_id            String   @unique
+  logo_url           String?
+  cor_primaria       String   @default("#667eea")
+  cor_secundaria     String   @default("#764ba2")
+  cor_fundo          String   @default("#ffffff")
+  cor_header         String   @default("#333333")
+  cor_texto          String   @default("#333333")
+  fonte_titulo       String   @default("system-ui")
+  fonte_corpo        String   @default("system-ui")
+  layout_grade       String   @default("grid")
+  produtos_por_linha Int      @default(3)
+  animacoes_ativadas Boolean  @default(true)
+  efeito_hover       String   @default("zoom")
+  meta_titulo        String?
+  meta_descricao     String?
+  instagram          String?
+  facebook           String?
+  atualizado_em      DateTime @updatedAt
+  loja               Loja     @relation(fields: [loja_id], references: [id], onDelete: Cascade)
+
+  @@map("personalizacao")
+}
+
+model Analytics {
+  id             String   @id @default(uuid())
+  loja_id        String
+  tipo           String
+  produto_id     String?
+  termo_busca    String?
+  ip_hash        String?
+  user_agent     String?
+  latitude       Float?
+  longitude      Float?
+  visualizado_em DateTime @default(now())
+  loja           Loja     @relation(fields: [loja_id], references: [id], onDelete: Cascade)
+
+  @@index([loja_id, tipo, visualizado_em])
+  @@index([loja_id, produto_id])
+  @@map("analytics")
+}
+
+model Sessao {
+  id         String   @id @default(uuid())
+  loja_id    String
+  token      String   @unique
+  ip         String?
+  user_agent String?
+  criado_em  DateTime @default(now())
+  expira_em  DateTime
+
+  @@index([token])
+  @@index([loja_id])
+  @@map("sessao")
+}
+
+model NotaFiscal {
+  id                  String   @id @default(uuid())
+  loja_id             String
+  chave_acesso        String   @unique
+  numero_nfe          String
+  serie               String?
+  fornecedor_nome     String
+  fornecedor_cnpj     String?
+  valor_total         Float
+  quantidade_itens    Int
+  processada          Boolean  @default(false)
+  produtos_importados Int      @default(0)
+  xml_path            String?
+  criado_em           DateTime @default(now())
+
+  @@index([loja_id, processada])
+  @@index([chave_acesso])
+  @@map("nota_fiscal")
+}

@@ -4,12 +4,17 @@
   "description": "MVP do buscador de produtos em lojas físicas locais - Sistema Completo",
   "main": "server-new.js",
   "scripts": {
-    "start": "node server-new.js",
-    "dev": "nodemon server-new.js",
+    "start": "npm --prefix web run start",
+    "dev": "npm --prefix web run dev",
+    "dev:all": "npm --prefix web run dev",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
-    "db:reset": "npx prisma migrate reset"
+    "db:reset": "npx prisma migrate reset",
+    "web:install": "npm --prefix web install",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build",
+    "web:start": "npm --prefix web run start"
   },
   "keywords": [
     "busca",
@@ -31,6 +36,9 @@
     "sharp": "^0.34.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "@modelcontextprotocol/server-sequential-thinking": "^2025.7.1",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.1",
+    "playwright": "^1.56.1"
   }
 }
