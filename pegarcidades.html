@@ -1,0 +1,117 @@
+<script>
+    // Pega os elementos do HTML
+    const selectEstado = document.getElementById('estados');
+    const selectCidade = document.getElementById('cidades');
+    const loadingDiv = document.getElementById('loading');
+
+    // Função para carregar os estados (com fallback)
+    async function carregarEstados() {
+        try {
+            // Tenta buscar da API do IBGE primeiro
+            console.log("Tentando buscar estados via API do IBGE...");
+            const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados');
+            if (!response.ok) throw new Error('Resposta da API não foi OK');
+            const estados = await response.json();
+
+            // Ordena e popula o select
+            estados.sort((a, b) => a.nome.localeCompare(b.nome));
+            for (const estado of estados) {
+                const option = document.createElement('option');
+                option.value = estado.sigla;
+                option.textContent = estado.nome;
+                selectEstado.appendChild(option);
+            }
+            console.log("Estados carregados via API com sucesso!");
+
+        } catch (error) {
+            // Se a API falhar, usa o JSON local como fallback
+            console.warn("API do IBGE falhou. Usando JSON de fallback para estados.", error);
+            try {
+                const response = await fetch('estados_cidades.json');
+                const data = await response.json();
+                
+                // Extrai, ordena e popula os estados do JSON
+                const estados = data.estados;
+                estados.sort((a, b) => a.nome.localeCompare(b.nome));
+                for (const estado of estados) {
+                    const option = document.createElement('option');
+                    option.value = estado.sigla;
+                    option.textContent = estado.nome;
+                    selectEstado.appendChild(option);
+                }
+            } catch (jsonError) {
+                console.error("Erro ao carregar o JSON de fallback de estados:", jsonError);
+            }
+        }
+    }
+
+    // Função para carregar as cidades (com fallback)
+    async function carregarCidades(uf) {
+        if (!uf) {
+            selectCidade.innerHTML = '<option value="">-- Aguardando estado --</option>';
+            selectCidade.disabled = true;
+            return;
+        }
+
+        loadingDiv.style.display = 'block';
+        selectCidade.innerHTML = '<option value="">-- Carregando --</option>';
+        selectCidade.disabled = true;
+
+        try {
+            // Tenta buscar da API do IBGE primeiro
+            console.log(`Tentando buscar cidades de ${uf} via API...`);
+            const urlCidades = `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`;
+            const response = await fetch(urlCidades);
+            if (!response.ok) throw new Error('Resposta da API não foi OK');
+            const cidades = await response.json();
+
+            // Limpa, ordena e popula
+            selectCidade.innerHTML = '<option value="">-- Selecione --</option>';
+            cidades.sort((a, b) => a.nome.localeCompare(b.nome));
+            for (const cidade of cidades) {
+                const option = document.createElement('option');
+                option.value = cidade.nome;
+                option.textContent = cidade.nome;
+                selectCidade.appendChild(option);
+            }
+             console.log("Cidades carregadas via API com sucesso!");
+
+        } catch (error) {
+            // Se a API falhar, usa o JSON local como fallback
+            console.warn(`API do IBGE falhou para cidades de ${uf}. Usando JSON de fallback.`, error);
+            try {
+                const response = await fetch('estados_cidades.json');
+                const data = await response.json();
+                
+                const estadoEncontrado = data.estados.find(estado => estado.sigla === uf);
+                if (estadoEncontrado && estadoEncontrado.cidades) {
+                    const cidades = estadoEncontrado.cidades;
+                    // Limpa, ordena e popula
+                    selectCidade.innerHTML = '<option value="">-- Selecione --</option>';
+                    cidades.sort((a, b) => a.localeCompare(b));
+                    for (const cidade of cidades) {
+                        const option = document.createElement('option');
+                        option.value = cidade;
+                        option.textContent = cidade;
+                        selectCidade.appendChild(option);
+                    }
+                }
+            } catch (jsonError) {
+                console.error("Erro ao carregar o JSON de fallback de cidades:", jsonError);
+                selectCidade.innerHTML = '<option value="">-- Erro ao carregar --</option>';
+            }
+        } finally {
+            loadingDiv.style.display = 'none';
+            selectCidade.disabled = false;
+        }
+    }
+
+    // Adiciona o "escutador" de eventos
+    selectEstado.addEventListener('change', (event) => {
+        const ufSelecionado = event.target.value;
+        carregarCidades(ufSelecionado);
+    });
+
+    // Carrega os estados ao iniciar
+    carregarEstados();
+</script>

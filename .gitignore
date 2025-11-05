@@ -6,7 +6,7 @@ package-lock.json
 *.log
 npm-debug.log*
 
-
+.next/
 # IDE
 .vscode/
 .idea/

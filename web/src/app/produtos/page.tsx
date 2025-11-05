@@ -1,257 +1,210 @@
-'use client'
+﻿'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Icon } from '@iconify/react'
+import Link from 'next/link'
 
-type Produto = {
+interface Produto {
   id: string
   nome_produto: string
-  descricao?: string | null
+  descricao: string | null
   preco: number
-  preco_promocional?: number | null
-  tipo?: 'produto' | 'servico'
-  disponivel: boolean
-  bloqueado: boolean
-  imagens?: { id: string; url: string; ordem: number }[]
-  categoria_id?: string | null
+  preco_promocional: number | null
+  tipo: 'produto'
+  loja_id: string
+  categoria_id: string | null
+  imagens?: { url: string }[]
+  loja: {
+    nome_loja: string
+    slug: string
+  }
+  categoria?: {
+    nome: string
+  }
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || ''
-
 export default function ProdutosPage() {
-  const [itens, setItens] = useState<Produto[]>([])
+  const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
-  const [erro, setErro] = useState('')
-  const [nome, setNome] = useState('')
-  const [preco, setPreco] = useState('')
-  const [tipo, setTipo] = useState<'produto' | 'servico'>('produto')
-  const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([])
-  const [categoriaId, setCategoriaId] = useState<string>('')
-  const [novaCategoria, setNovaCategoria] = useState('')
-  const [selecionado, setSelecionado] = useState<Produto | null>(null)
-
-  const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : ''), [])
-
-  const carregar = async () => {
-    setErro('')
-    try {
-      const res = await fetch(`${API_BASE}/api/produtos`, { headers: { Authorization: `Bearer ${token}` } })
-      if (!res.ok) throw new Error('Falha ao listar')
-      const data = await res.json()
-      setItens(data)
-    } catch (e: any) {
-      setErro(e.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-  const carregarCategorias = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/categorias`, { headers: { Authorization: `Bearer ${token}` } })
-      const data = await res.json()
-      setCategorias(data)
-    } catch {}
-  }
+  const [busca, setBusca] = useState('')
+  const [categoriaFiltro, setCategoriaFiltro] = useState('')
+  const [categorias, setCategorias] = useState<{id: string, nome: string}[]>([])
 
   useEffect(() => {
-    if (!token) {
-      window.location.href = '/login'
-      return
-    }
-    carregar()
-    carregarCategorias()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetch('/api/produtos')
+      .then(res => res.json())
+      .then(data => {
+        setProdutos(data)
+        const cats = new Map<string, string>()
+        data.forEach((p: Produto) => {
+          if (p.categoria_id && p.categoria?.nome) {
+            cats.set(p.categoria_id, p.categoria.nome)
+          }
+        })
+        setCategorias(Array.from(cats.entries()).map(([id, nome]) => ({ id, nome })))
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }, [])
 
-  const criar = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setErro('')
-    try {
-  const body = { nome_produto: nome, preco: Number(preco), tipo, categoria_id: categoriaId || undefined }
-      const res = await fetch(`${API_BASE}/api/produtos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body)
-      })
-      if (!res.ok) throw new Error('Falha ao criar')
-      setNome('')
-      setPreco('')
-      setCategoriaId('')
-      await carregar()
-    } catch (e: any) {
-      setErro(e.message)
-    }
-  }
+  const produtosFiltrados = produtos.filter(p => {
+    const matchBusca = !busca || 
+      p.nome_produto.toLowerCase().includes(busca.toLowerCase()) ||
+      p.descricao?.toLowerCase().includes(busca.toLowerCase()) ||
+      p.loja.nome_loja.toLowerCase().includes(busca.toLowerCase())
+    
+    const matchCategoria = !categoriaFiltro || p.categoria_id === categoriaFiltro
+    
+    return matchBusca && matchCategoria
+  })
 
-  const remover = async (id: string) => {
-    if (!confirm('Remover este item?')) return
-    await fetch(`${API_BASE}/api/produtos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
-    await carregar()
-  }
-
-  const toggleDisponivel = async (item: Produto) => {
-    await fetch(`${API_BASE}/api/produtos/${item.id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ disponivel: !item.disponivel })
-    })
-    await carregar()
-  }
-
-  const criarCategoria = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!novaCategoria) return
-    const res = await fetch(`${API_BASE}/api/categorias`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ nome: novaCategoria })
-    })
-    if (res.ok) {
-      setNovaCategoria('')
-      await carregarCategorias()
-    }
-  }
-
-  const onUploadImagens = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || !selecionado) return
-    const form = new FormData()
-    Array.from(files).forEach(f => form.append('imagens', f))
-    await fetch(`${API_BASE}/api/produtos/${selecionado.id}/imagens`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form
-    })
-    await carregar()
-    // re-seleciona o item atualizado
-    const novo = (await (await fetch(`${API_BASE}/api/produtos`, { headers: { Authorization: `Bearer ${token}` } })).json()) as Produto[]
-    setItens(novo)
-    setSelecionado(novo.find(p => p.id === selecionado.id) || null)
-    e.target.value = ''
-  }
-
-  const removerImagem = async (imgId: string) => {
-    if (!selecionado) return
-    await fetch(`${API_BASE}/api/produtos/${selecionado.id}/imagens/${imgId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
-    await carregar()
-    const novo = (await (await fetch(`${API_BASE}/api/produtos`, { headers: { Authorization: `Bearer ${token}` } })).json()) as Produto[]
-    setItens(novo)
-    setSelecionado(novo.find(p => p.id === selecionado.id) || null)
-  }
-
-  const moverImagem = async (index: number, direcao: -1 | 1) => {
-    if (!selecionado || !selecionado.imagens) return
-    const arr = [...selecionado.imagens].sort((a, b) => a.ordem - b.ordem)
-    const novoIndex = index + direcao
-    if (novoIndex < 0 || novoIndex >= arr.length) return
-    // swap
-    ;[arr[index].ordem, arr[novoIndex].ordem] = [arr[novoIndex].ordem, arr[index].ordem]
-    const ordem = arr.map((it, i) => ({ id: it.id, ordem: i }))
-    await fetch(`${API_BASE}/api/produtos/${selecionado.id}/imagens/ordenar`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ ordem })
-    })
-    await carregar()
-    const novo = (await (await fetch(`${API_BASE}/api/produtos`, { headers: { Authorization: `Bearer ${token}` } })).json()) as Produto[]
-    setItens(novo)
-    setSelecionado(novo.find(p => p.id === selecionado.id) || null)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Icon icon="mdi:loading" className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Carregando produtos...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <main className="min-h-screen bg-bg text-text-primary p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold">Produtos e Serviços</h1>
-          <a href="/dashboard" className="text-sm underline text-primary">Voltar ao Dashboard</a>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
+              <Icon icon="mdi:arrow-left" className="w-5 h-5" />
+              Voltar
+            </Link>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Icon icon="mdi:shopping-outline" className="w-8 h-8 text-blue-600" />
+              Produtos
+            </h1>
+            <div className="w-20"></div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Icon icon="mdi:magnify" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar produtos..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="relative min-w-[200px]">
+              <Icon icon="mdi:tag-outline" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <select
+                value={categoriaFiltro}
+                onChange={(e) => setCategoriaFiltro(e.target.value)}
+                className="w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="">Todas as categorias</option>
+                {categorias.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
+      </header>
 
-        <section className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-          <h2 className="font-medium mb-3">Cadastrar</h2>
-          <form onSubmit={criar} className="grid sm:grid-cols-6 gap-3">
-            <input value={nome} onChange={(e)=>setNome(e.target.value)} placeholder="Nome" className="px-3 py-2 rounded bg-white/5 border border-white/10 outline-none" required />
-            <input value={preco} onChange={(e)=>setPreco(e.target.value)} placeholder="Preço" type="number" step="0.01" className="px-3 py-2 rounded bg-white/5 border border-white/10 outline-none" required />
-            <select value={tipo} onChange={(e)=>setTipo(e.target.value as any)} className="px-3 py-2 rounded bg-white/5 border border-white/10">
-              <option value="produto">Produto</option>
-              <option value="servico">Serviço</option>
-            </select>
-            <select value={categoriaId} onChange={(e)=>setCategoriaId(e.target.value)} className="px-3 py-2 rounded bg-white/5 border border-white/10">
-              <option value="">Sem categoria</option>
-              {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
-            <button className="px-4 py-2 rounded bg-primary text-bg shadow-glow">Adicionar</button>
-          </form>
-          <form onSubmit={criarCategoria} className="mt-3 flex gap-2 items-center">
-            <input value={novaCategoria} onChange={(e)=>setNovaCategoria(e.target.value)} placeholder="Nova categoria" className="px-3 py-2 rounded bg-white/5 border border-white/10 outline-none" />
-            <button className="px-3 py-2 rounded bg-white/10 border border-white/10">Criar categoria</button>
-          </form>
-          {erro && <div className="text-red-400 text-sm mt-3">{erro}</div>}
-        </section>
-
-        <section className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h2 className="font-medium mb-3">Lista</h2>
-          {loading ? (
-            <div>Carregando…</div>
-          ) : itens.length === 0 ? (
-            <div className="text-text-secondary">Nenhum item cadastrado.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-text-secondary">
-                    <th className="py-2">Nome</th>
-                    <th>Tipo</th>
-                    <th>Preço</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {itens.map((p) => (
-                    <tr key={p.id} className={`border-t border-white/10 ${selecionado?.id===p.id ? 'bg-white/[0.03]' : ''}`} onClick={()=>setSelecionado(p)}>
-                      <td className="py-2">{p.nome_produto}</td>
-                      <td className="capitalize">{p.tipo || 'produto'}</td>
-                      <td>R$ {p.preco}</td>
-                      <td>
-                        <button onClick={()=>toggleDisponivel(p)} className={`px-2 py-1 rounded text-xs ${p.disponivel ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-text-secondary'}`}>
-                          {p.disponivel ? 'Disponível' : 'Indisponível'}
-                        </button>
-                      </td>
-                      <td className="text-right">
-                        <button onClick={()=>remover(p.id)} className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs">Remover</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {produtosFiltrados.length === 0 ? (
+          <div className="text-center py-16">
+            <Icon icon="mdi:package-variant-closed" className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-semibold text-gray-700 mb-2">Nenhum produto encontrado</h2>
+            <p className="text-gray-500">Tente ajustar os filtros de busca</p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-6 text-sm text-gray-600">
+              {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
             </div>
-          )}
-        </section>
-
-        {selecionado && (
-          <section className="bg-white/5 border border-white/10 rounded-xl p-4 mt-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-medium">Imagens de: {selecionado.nome_produto}</h2>
-              <label className="px-3 py-2 rounded bg-white/10 border border-white/10 cursor-pointer">
-                <input type="file" multiple className="hidden" onChange={onUploadImagens} />
-                Enviar imagens
-              </label>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {(selecionado.imagens || []).sort((a,b)=>a.ordem-b.ordem).map((img, idx) => (
-                <div key={img.id} className="bg-black/30 rounded overflow-hidden border border-white/10">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt="img" className="w-full h-28 object-cover" />
-                  <div className="flex items-center justify-between p-2 text-xs">
-                    <div className="flex gap-1">
-                      <button onClick={()=>moverImagem(idx,-1)} className="px-2 py-1 bg-white/10 rounded">↑</button>
-                      <button onClick={()=>moverImagem(idx, 1)} className="px-2 py-1 bg-white/10 rounded">↓</button>
-                    </div>
-                    <button onClick={()=>removerImagem(img.id)} className="px-2 py-1 bg-red-500/20 text-red-400 rounded">Excluir</button>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {produtosFiltrados.map(produto => (
+                <Link 
+                  key={produto.id} 
+                  href="/loja/{produto.loja.slug}"
+                  className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100"
+                >
+                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                    {produto.imagens?.[0]?.url ? (
+                      <img
+                        src={produto.imagens[0].url}
+                        alt={produto.nome_produto}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+                        <Icon icon="mdi:package-variant" className="w-20 h-20 text-blue-300" />
+                      </div>
+                    )}
+                    
+                    {produto.preco_promocional && (
+                      <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
+                        -{Math.round((1 - produto.preco_promocional / produto.preco) * 100)}%
+                      </div>
+                    )}
                   </div>
-                </div>
+                  
+                  <div className="p-4">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                      <Icon icon="mdi:store" className="w-3.5 h-3.5" />
+                      {produto.loja.nome_loja}
+                    </div>
+                    
+                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[48px] group-hover:text-blue-600 transition-colors">
+                      {produto.nome_produto}
+                    </h3>
+                    
+                    {produto.categoria?.nome && (
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                        <Icon icon="mdi:tag-outline" className="w-3.5 h-3.5" />
+                        {produto.categoria.nome}
+                      </div>
+                    )}
+                    
+                    <div className="mb-3">
+                      {produto.preco_promocional ? (
+                        <div>
+                          <div className="text-sm text-gray-400 line-through">
+                            R$ {produto.preco.toFixed(2)}
+                          </div>
+                          <div className="text-xl font-bold text-blue-600">
+                            R$ {produto.preco_promocional.toFixed(2)}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xl font-bold text-gray-900">
+                          R$ {produto.preco.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                      <Icon icon="mdi:eye" className="w-5 h-5" />
+                      Ver na loja
+                    </button>
+                  </div>
+                </Link>
               ))}
             </div>
-          </section>
+          </>
         )}
-      </div>
-    </main>
+      </main>
+
+      <footer className="bg-white border-t mt-16">
+        <div className="max-w-7xl mx-auto px-4 py-8 text-center text-sm text-gray-600">
+          <p>&copy; {new Date().getFullYear()} Encontra Tudo. Todos os direitos reservados.</p>
+        </div>
+      </footer>
+    </div>
   )
 }

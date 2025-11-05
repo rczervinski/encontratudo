@@ -16,7 +16,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL}/api/auth/login`, {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login, senha })
@@ -26,7 +26,7 @@ export default function LoginPage() {
 
       localStorage.setItem('token', data.token)
       localStorage.setItem('loja', JSON.stringify(data.loja))
-      router.push('/dashboard')
+      router.push('/painel')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -35,25 +35,51 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-bg">
-      <div className="w-full max-w-md bg-bg-card border border-primary/30 rounded-2xl p-8 shadow-glow">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 to-white">
+      <div className="w-full max-w-md bg-white border-2 border-purple-200 rounded-2xl p-8 shadow-2xl">
         <div className="text-center mb-6">
-          <h1 className="text-primary text-3xl font-bold drop-shadow-[0_0_20px_rgba(0,255,136,0.5)]">🔍 EncontraTudo</h1>
-          <p className="text-text-secondary text-sm mt-1">Acesse sua conta</p>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-white">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            </div>
+            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-purple-800">ENCONTRATUDO</h1>
+          </div>
+          <p className="text-gray-600 text-sm mt-1">Acesse sua conta</p>
         </div>
-        {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded mb-4">{error}</div>}
+        {error && <div className="bg-red-50 border-2 border-red-300 text-red-700 p-3 rounded-lg mb-4 font-semibold">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-text-primary mb-1">E-mail ou Telefone</label>
-            <input value={login} onChange={(e)=>setLogin(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary outline-none text-white" />
+            <label className="block text-sm text-gray-700 font-semibold mb-1">E-mail ou Telefone</label>
+            <input 
+              value={login} 
+              onChange={(e)=>setLogin(e.target.value)} 
+              className="w-full px-4 py-3 rounded-lg bg-white border-2 border-purple-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none text-gray-900 transition-all" 
+              placeholder="Digite seu e-mail ou telefone"
+            />
           </div>
           <div>
-            <label className="block text-sm text-text-primary mb-1">Senha</label>
-            <input type="password" value={senha} onChange={(e)=>setSenha(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary outline-none text-white" />
+            <label className="block text-sm text-gray-700 font-semibold mb-1">Senha</label>
+            <input 
+              type="password" 
+              value={senha} 
+              onChange={(e)=>setSenha(e.target.value)} 
+              className="w-full px-4 py-3 rounded-lg bg-white border-2 border-purple-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none text-gray-900 transition-all" 
+              placeholder="Digite sua senha"
+            />
           </div>
-          <button disabled={loading} className="w-full py-2 bg-primary text-bg rounded-lg shadow-glow hover:shadow-glowStrong transition">{loading ? 'Entrando…' : 'Entrar'}</button>
+          <button 
+            disabled={loading} 
+            className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg shadow-lg hover:from-purple-700 hover:to-purple-800 transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Entrando…' : 'Entrar'}
+          </button>
         </form>
-        <div className="text-center text-sm text-text-secondary mt-3">Não tem conta? <a href="/registro" className="text-primary">Cadastre-se gratuitamente</a></div>
+        <div className="text-center text-sm text-gray-600 mt-4">
+          Não tem conta? <a href="/registro" className="text-purple-600 font-bold hover:text-purple-800">Cadastre-se gratuitamente</a>
+        </div>
       </div>
     </main>
   )

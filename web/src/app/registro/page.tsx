@@ -59,16 +59,16 @@ export default function RegistroPage() {
         body.bairro = bairro
         body.cep = cep
       }
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL}/api/auth/register`, {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.erro || data.error || 'Erro ao cadastrar')
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('loja', JSON.stringify(data.loja))
-      router.push('/dashboard')
+  localStorage.setItem('token', data.token)
+  localStorage.setItem('loja', JSON.stringify(data.loja))
+      router.push('/painel')
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -77,33 +77,69 @@ export default function RegistroPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-bg p-4">
-      <div className="w-full max-w-xl bg-bg-card border border-primary/30 rounded-2xl p-6 shadow-glow max-h-[90vh] overflow-y-auto">
-        <div className="sticky -top-6 h-1 bg-white/10 rounded mb-6">
-          <div className="h-full bg-primary" style={{width: `${(step/5)*100}%`}} />
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 to-white p-4">
+      <div className="w-full max-w-xl bg-white border-2 border-purple-200 rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky -top-6 h-2 bg-purple-100 rounded-full mb-6">
+          <div className="h-full bg-gradient-to-r from-purple-500 to-purple-700 rounded-full transition-all duration-300" style={{width: `${(step/5)*100}%`}} />
         </div>
 
-        {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded mb-4">{error}</div>}
+        {error && <div className="bg-red-50 border-2 border-red-300 text-red-700 p-3 rounded-lg mb-4 font-semibold">{error}</div>}
 
         {step === 1 && (
           <section>
-            <h2 className="text-primary text-2xl font-semibold mb-1">Bem-vindo! 👋</h2>
-            <p className="text-text-secondary mb-4">Você é autônomo ou tem uma loja física?</p>
+            <h2 className="text-purple-900 text-2xl font-bold mb-1">Bem-vindo! 👋</h2>
+            <p className="text-gray-600 mb-4">Você é autônomo ou tem uma loja física?</p>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={()=>setTipo('loja')} className={`p-6 rounded-xl border ${tipo==='loja'?'border-primary bg-primary/10 shadow-glow':'border-white/10 bg-white/5'}`}>🏪 Loja Física</button>
-              <button onClick={()=>setTipo('autonomo')} className={`p-6 rounded-xl border ${tipo==='autonomo'?'border-primary bg-primary/10 shadow-glow':'border-white/10 bg-white/5'}`}>🛠️ Autônomo</button>
+              <button 
+                onClick={()=>setTipo('loja')} 
+                className={`p-6 rounded-xl border-2 transition-all ${tipo==='loja'?'border-purple-500 bg-purple-50 shadow-lg scale-105':'border-purple-200 bg-white hover:border-purple-300'}`}
+              >
+                <div className="text-4xl mb-2">🏪</div>
+                <div className="font-bold text-gray-900">Loja Física</div>
+              </button>
+              <button 
+                onClick={()=>setTipo('autonomo')} 
+                className={`p-6 rounded-xl border-2 transition-all ${tipo==='autonomo'?'border-purple-500 bg-purple-50 shadow-lg scale-105':'border-purple-200 bg-white hover:border-purple-300'}`}
+              >
+                <div className="text-4xl mb-2">🛠️</div>
+                <div className="font-bold text-gray-900">Autônomo</div>
+              </button>
             </div>
-            <div className="mt-4 flex gap-2"><button disabled={!tipo} onClick={next} className="btn btn-primary bg-primary text-bg rounded px-4 py-2 shadow-glow disabled:opacity-30">Continuar</button></div>
-            <div className="text-center text-sm text-text-secondary mt-4">Já tem uma conta? <Link href="/login" className="text-primary">Fazer Login</Link></div>
+            <div className="mt-4 flex gap-2">
+              <button 
+                disabled={!tipo} 
+                onClick={next} 
+                className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg shadow-lg hover:from-purple-700 hover:to-purple-800 transition-all font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Continuar
+              </button>
+            </div>
+            <div className="text-center text-sm text-gray-600 mt-4">
+              Já tem uma conta? <Link href="/login" className="text-purple-600 font-bold hover:text-purple-800">Fazer Login</Link>
+            </div>
           </section>
         )}
 
         {step === 2 && (
           <section>
-            <h2 className="text-primary text-2xl font-semibold mb-1">Legal! 😊</h2>
-            <p className="text-text-secondary mb-4">Qual o nome da sua {tipo==='autonomo'? 'atividade' : 'loja'}?</p>
-            <input value={nome} onChange={(e)=>setNome(e.target.value)} placeholder="Ex: Padaria do João" className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary outline-none text-white" />
-            <div className="mt-4 flex gap-2"><button onClick={back} className="px-4 py-2 rounded bg-white/10">Voltar</button><button disabled={nome.length<3} onClick={next} className="px-4 py-2 rounded bg-primary text-bg shadow-glow disabled:opacity-30">Continuar</button></div>
+            <h2 className="text-purple-900 text-2xl font-bold mb-1">Legal! 😊</h2>
+            <p className="text-gray-600 mb-4">Qual o nome da sua {tipo==='autonomo'? 'atividade' : 'loja'}?</p>
+            <input 
+              value={nome} 
+              onChange={(e)=>setNome(e.target.value)} 
+              placeholder="Ex: Padaria do João" 
+              className="w-full px-4 py-3 rounded-lg bg-white border-2 border-purple-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none text-gray-900" 
+            />
+            <div className="mt-4 flex gap-2">
+              <button onClick={back} className="px-6 py-3 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all font-semibold">Voltar</button>
+              <button 
+                disabled={nome.length<3} 
+                onClick={next} 
+                className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg hover:from-purple-700 hover:to-purple-800 transition-all font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Continuar
+              </button>
+            </div>
           </section>
         )}
 

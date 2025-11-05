@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Loja {
-  id                    String          @id @default(uuid())
+  id                    Int             @id @default(autoincrement())
   email                 String?         @unique
   telefone              String?
   senha                 String
@@ -31,7 +31,7 @@ model Loja {
   bairro                String?
   analytics             Analytics[]
   categorias            Categoria[]
-  personalizacao        Personalizacao?
+  personalizacao        Json?           @db.JsonB
   produtos              Produto[]
 
   @@index([slug])
@@ -40,13 +40,14 @@ model Loja {
 }
 
 model Categoria {
-  id        String      @id @default(uuid())
+  id        Int         @id @default(autoincrement())
   nome      String
   slug      String
   nivel     Int
   ordem     Int         @default(0)
-  pai_id    String?
-  loja_id   String
+  pai_id    Int?
+  loja_id   Int
+  oculto    Boolean     @default(false)
   criado_em DateTime    @default(now())
   loja      Loja        @relation(fields: [loja_id], references: [id], onDelete: Cascade)
   pai       Categoria?  @relation("SubCategorias", fields: [pai_id], references: [id], onDelete: Cascade)
@@ -59,23 +60,24 @@ model Categoria {
 }
 
 model Produto {
-  id                 String          @id @default(uuid())
+  id                 Int             @id @default(autoincrement())
   tipo               String          @default("produto")
   nome_produto       String
   descricao          String?
   preco              Float
   preco_promocional  Float?
   tags               String
-  categoria_id       String?
+  categoria_id       Int?
   estoque_quantidade Int?
   disponivel         Boolean         @default(true)
   bloqueado          Boolean         @default(false)
+  destaque           Boolean         @default(false)
   duracao_estimada   String?
   area_atendimento   String?
   aceita_urgencia    Boolean         @default(false)
   importado_nfe      Boolean         @default(false)
   nfe_chave          String?
-  loja_id            String
+  loja_id            Int
   criado_em          DateTime        @default(now())
   atualizado_em      DateTime        @updatedAt
   imagens            ImagemProduto[]
@@ -89,8 +91,8 @@ model Produto {
 }
 
 model ImagemProduto {
-  id         String   @id @default(uuid())
-  produto_id String
+  id         Int      @id @default(autoincrement())
+  produto_id Int
   url        String
   ordem      Int      @default(0)
   tamanho_kb Int
@@ -101,36 +103,12 @@ model ImagemProduto {
   @@map("imagem_produto")
 }
 
-model Personalizacao {
-  id                 String   @id @default(uuid())
-  loja_id            String   @unique
-  logo_url           String?
-  cor_primaria       String   @default("#667eea")
-  cor_secundaria     String   @default("#764ba2")
-  cor_fundo          String   @default("#ffffff")
-  cor_header         String   @default("#333333")
-  cor_texto          String   @default("#333333")
-  fonte_titulo       String   @default("system-ui")
-  fonte_corpo        String   @default("system-ui")
-  layout_grade       String   @default("grid")
-  produtos_por_linha Int      @default(3)
-  animacoes_ativadas Boolean  @default(true)
-  efeito_hover       String   @default("zoom")
-  meta_titulo        String?
-  meta_descricao     String?
-  instagram          String?
-  facebook           String?
-  atualizado_em      DateTime @updatedAt
-  loja               Loja     @relation(fields: [loja_id], references: [id], onDelete: Cascade)
-
-  @@map("personalizacao")
-}
 
 model Analytics {
-  id             String   @id @default(uuid())
-  loja_id        String
+  id             Int      @id @default(autoincrement())
+  loja_id        Int
   tipo           String
-  produto_id     String?
+  produto_id     Int?
   termo_busca    String?
   ip_hash        String?
   user_agent     String?
@@ -145,8 +123,8 @@ model Analytics {
 }
 
 model Sessao {
-  id         String   @id @default(uuid())
-  loja_id    String
+  id         Int      @id @default(autoincrement())
+  loja_id    Int
   token      String   @unique
   ip         String?
   user_agent String?
@@ -159,8 +137,8 @@ model Sessao {
 }
 
 model NotaFiscal {
-  id                  String   @id @default(uuid())
-  loja_id             String
+  id                  Int      @id @default(autoincrement())
+  loja_id             Int
   chave_acesso        String   @unique
   numero_nfe          String
   serie               String?
